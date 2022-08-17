@@ -33,27 +33,23 @@ class User:
         self.client_socket = client_socket
 
 
-class ChatUsers:
+class UserChatList(set):
     """Коллекция списка пользователей."""
 
-    def add_user(self, user: User):
-        """Добавляет пользователя."""
-        self.users.add(user)
-
-    def remove_user(self, user: User = None, user_socket: socket.socket = None) -> bool:
+    def remove(self, user: User = None, user_socket: socket.socket = None) -> bool:
         """
         Удаляет пользователя. Если он был, возвращает `True`,
         иначе `False`.
         """
         if user:
             try:
-                self.users.remove(user)
+                super().remove(user)
             except KeyError:
                 return False
         elif user_socket:
-            for user in self.users:
+            for user in self:
                 if user.client_socket == user_socket:
-                    self.users.remove(user)
+                    super().remove(user)
                     break
             else:
                 return False
@@ -64,15 +60,9 @@ class ChatUsers:
     @property
     def users_sockets(self) -> list[socket.socket]:
         """Возвращает список сокетов пользователей."""
-        return [user.client_socket for user in self.users]
+        return [user.client_socket for user in self]
 
     def get_user(self, user_socket: socket.socket) -> User:
         """Возвращает пользователя, который имеет сокет `user_socket`."""
-        for user in self.users:
+        for user in self:
             return user if user.client_socket == user_socket else None
-
-    def __iter__(self):
-        return self.users
-
-    def __init__(self):
-        self.users = set()
