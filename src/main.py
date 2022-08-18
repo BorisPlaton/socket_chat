@@ -1,8 +1,8 @@
-from server.server import Server
+from server.server import Chat
 
 
 def main():
-    server = Server()
+    server = Chat()
     server.start_listening()
 
 

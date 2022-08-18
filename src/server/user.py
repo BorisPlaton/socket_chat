@@ -17,9 +17,9 @@ class User:
     def formatted_user_addr(self) -> str:
         """
         Возвращает строку удаленного адреса пользователя
-        вида `HOST:PORT`.
+        вида `HOST:PORT | name`.
         """
-        return ':'.join(map(str, self.user_address))
+        return ':'.join(map(str, self.user_address)) + f' | {self.username}'
 
     def __del__(self):
         """
@@ -27,6 +27,9 @@ class User:
         генератора имен.
         """
         self.names_generator.delete_name(self.username)
+
+    def __repr__(self):
+        return self.username
 
     def __init__(self, client_socket: socket.socket):
         self.username = self.names_generator.get_name()
