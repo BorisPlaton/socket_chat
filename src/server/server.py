@@ -37,11 +37,15 @@ class Server:
         """
         return {}
 
-    def accept_connection(self):
-        """Принимает соединение от клиента."""
+    def accept_connection(self) -> socket.socket:
+        """
+        Принимает соединение от клиента и возвращает его
+        сокет.
+        """
         client_socket, _ = self.server_socket.accept()
         self.register_for_reading(client_socket, lambda: self.invoke_handler(client_socket))
         self.call_handler(client_socket, self.new_connection)
+        return client_socket
 
     def invoke_handler(self, client_socket: socket.socket):
         """
@@ -50,7 +54,8 @@ class Server:
         """
         if not client_socket.recv(4096, socket.MSG_PEEK):
             self.call_handler(client_socket, self.connection_closed)
-            self.unregister_client(client_socket)
+            self.unregister_from_reading(client_socket)
+            self.close_socket(client_socket)
         else:
             self.call_handler(client_socket, self.request_received)
 
@@ -64,11 +69,15 @@ class Server:
         """Регистрирует сокет на слежение."""
         self.selector.register(client_socket, selectors.EVENT_READ, handler)
 
-    def unregister_client(self, client_socket: socket.socket):
+    def unregister_from_reading(self, client_socket: socket.socket):
         """Убирает сокет со слежения."""
         if client_socket is self.server_socket:
             raise ValueError("Нельзя перестать следить за серверным сокетом.")
         self.selector.unregister(client_socket)
+
+    @staticmethod
+    def close_socket(client_socket: socket.socket):
+        """Закрывает соединение с сокетом."""
         client_socket.close()
 
     def start_listening(self):
@@ -79,17 +88,16 @@ class Server:
             for reg_socket, event in self.selector.select():
                 reg_socket.data()
 
-    def get_server_socket(self) -> socket.socket:
+    @staticmethod
+    def get_server_socket(host: str, port: int) -> socket.socket:
         """Возвращает сокет сервера."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind((self.host, self.port))
+        sock.bind((host, port))
         return sock
 
-    def __init__(self):
-        self.host = 'localhost'
-        self.port = 5555
-        self.server_socket = self.get_server_socket()
+    def __init__(self, host: str, port: int):
+        self.server_socket = self.get_server_socket(host, port)
         self.selector = selectors.DefaultSelector()
 
 
@@ -144,6 +152,7 @@ class Chat(Server):
         user.client_socket.send(self.format_message_before_send(message))
 
     def get_users_in_chat_message(self, to_exclude: list = None) -> str:
+        """Возвращает специальное сообщение о пользователях в чате."""
         users_list = self.users_in_chat
         if to_exclude:
             users_list = [user for user in users_list if user not in to_exclude]
@@ -155,12 +164,14 @@ class Chat(Server):
 
     @staticmethod
     def format_message_before_send(message: str) -> bytes:
+        """Форматирует сообщение перед отправкой."""
         if message.endswith('\n'):
             return message.encode('utf-8')
         return (message + '\n').encode('utf-8')
 
     @property
     def users_in_chat(self) -> list[User]:
+        """Возвращает список всех пользователей чата."""
         return [user for user in self.registered_users.values()]
 
     @staticmethod
@@ -180,8 +191,9 @@ class Chat(Server):
 
     @staticmethod
     def get_server_mark(message: str):
+        """Помечает сообщение, как отправленное сервером."""
         return "=== Server ===\n" + message + "\n==============\n"
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, host: str, port: int):
+        super().__init__(host, port)
         self.registered_users: dict[socket.socket, User] = {}

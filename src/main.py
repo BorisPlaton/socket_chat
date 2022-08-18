@@ -2,7 +2,7 @@ from server.server import Chat
 
 
 def main():
-    server = Chat()
+    server = Chat('localhost', 5555)
     server.start_listening()
 
 
