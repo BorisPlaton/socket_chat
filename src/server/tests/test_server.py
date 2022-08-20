@@ -1,6 +1,6 @@
 import pytest
 
-from server.server import Server
+from server.handlers import Server
 
 
 @pytest.mark.parametrize(
